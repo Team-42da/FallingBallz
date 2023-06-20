@@ -20,8 +20,13 @@ class GameScene: SKScene {
         makeObstacle()
         
         self.enumerateChildNodes(withName: "//obstacle*") { (node, stop) in
-            node.run(SKAction.moveBy(x: 0, y: self.frame.size.width * 0.1, duration: 0.1))
+            node.run(SKAction.moveBy(x: 0, y: self.frame.size.height * 0.15, duration: 0.1))
+            if node.position.y > -800 + self.frame.size.height * 0.15 * 5 {
+                node.removeFromParent()
+            }
         }
+        
+        
     }
     
     func randomPosX() -> Int {
@@ -34,7 +39,7 @@ class GameScene: SKScene {
         let obstacle = SKSpriteNode(imageNamed: "huddle")
         obstacle.size = CGSize(width: frame.size.width * 0.2 , height: frame.size
             .height * 0.1)
-        obstacle.position = CGPoint(x: randomX, y: -700)
+        obstacle.position = CGPoint(x: randomX, y: -800)
         obstacle.name = "obstacle\(obstacleNumber)"
         obstacleNumber += 1
         
