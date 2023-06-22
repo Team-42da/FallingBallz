@@ -16,7 +16,12 @@ class GameScene: SKScene {
         
     }
     
+    // 누르면 볼이 향할 방향 나타내기
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        
+    }
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         makeObstacle()
         
         self.enumerateChildNodes(withName: "//obstacle*") { (node, stop) in
@@ -25,8 +30,6 @@ class GameScene: SKScene {
                 node.removeFromParent()
             }
         }
-        
-        
     }
     
     func randomPosX() -> Int {
@@ -34,20 +37,40 @@ class GameScene: SKScene {
         return randomX
     }
     
+    func randomHuddle() -> String {
+        let randomShape = Int.random(in: 0...2)
+        let shapeName: String
+        
+        switch randomShape {
+        case 0:
+            shapeName = "Triangle"
+        case 1:
+            shapeName = "Circle"
+        case 2:
+            shapeName = "Rectangle"
+        default:
+            shapeName = "Circle"
+        }
+        
+        return shapeName
+    }
+    
     func makeObstacle() {
         let randomX = randomPosX()
-        let obstacle = SKSpriteNode(imageNamed: "huddle")
+        let randomShape = randomHuddle()
+        let obstacle = SKSpriteNode(imageNamed: "huddle\(randomShape)")
         obstacle.size = CGSize(width: frame.size.width * 0.2 , height: frame.size
             .height * 0.1)
         obstacle.position = CGPoint(x: randomX, y: -800)
         obstacle.name = "obstacle\(obstacleNumber)"
         obstacleNumber += 1
         
+        
         self.addChild(obstacle)
         
-        var heightScale = frame.size.height * 0.1
+        let heightScale = frame.size.height * 0.1
         
-        obstacle.run(SKAction.moveBy(x: 0, y:heightScale, duration: 0.1))
+        obstacle.run(SKAction.moveBy(x: 0, y: heightScale, duration: 0.1))
     }
     
     
