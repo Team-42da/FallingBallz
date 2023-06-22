@@ -22,7 +22,19 @@ class GameScene: SKScene {
     }
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        makeObstacle()
+        
+        let randomObsacleNumber = Int.random(in: 1...3)
+        if randomObsacleNumber == 1 {
+            makeObstacle()
+        } else if randomObsacleNumber == 2{
+            makeObstacle()
+            makeObstacle()
+        } else {
+            makeObstacle()
+            makeObstacle()
+            makeObstacle()
+        }
+
         
         self.enumerateChildNodes(withName: "//obstacle*") { (node, stop) in
             node.run(SKAction.moveBy(x: 0, y: self.frame.size.height * 0.15, duration: 0.1))
@@ -64,7 +76,6 @@ class GameScene: SKScene {
         obstacle.position = CGPoint(x: randomX, y: -800)
         obstacle.name = "obstacle\(obstacleNumber)"
         obstacleNumber += 1
-        
         
         self.addChild(obstacle)
         
