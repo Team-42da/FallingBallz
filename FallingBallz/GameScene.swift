@@ -110,7 +110,21 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     func addCount() -> SKLabelNode {
-        let labelNode = SKLabelNode(text: "17")
+        let nodeCount: Int
+        
+        switch score {
+        case 0...10:
+            nodeCount = Int.random(in: 1...3)
+        case 11...20:
+            nodeCount = Int.random(in: 4...10)
+        case 21...40:
+            nodeCount = Int.random(in: 11...20)
+        case 41...60:
+            nodeCount = Int.random(in: 21...30)
+        default:
+            nodeCount = Int.random(in: 1...100)
+        }
+        let labelNode = SKLabelNode(text: "\(nodeCount)")
         labelNode.fontColor = UIColor.black
         labelNode.fontSize = 40
         labelNode.fontName = "SFUI-Regular"
