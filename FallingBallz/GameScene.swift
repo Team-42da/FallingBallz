@@ -20,9 +20,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     override func didMove(to view: SKView) {
-        let borderBody = SKPhysicsBody(edgeLoopFrom: self.frame)
-        borderBody.friction = 0
-        self.physicsBody = borderBody
+//        let borderBody = SKPhysicsBody(edgeLoopFrom: CGRect(x: frame.minX, y: frame.minY - 100, width: frame.width, height: frame.height + 100))
+//        borderBody.friction = 0
+//        self.physicsBody = borderBody
         
         scoreLabel = SKLabelNode(fontNamed: "Chalkduster")
         scoreLabel.text = "Score: 0"
@@ -48,18 +48,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         
-        let randomObsacleNumber = Int.random(in: 1...3)
-        if randomObsacleNumber == 1 {
-            makeObstacle()
-        } else if randomObsacleNumber == 2{
-            makeObstacle()
-            makeObstacle()
-        } else {
-            makeObstacle()
-            makeObstacle()
-            makeObstacle()
-        }
-        
+        arrangeObstacle()
         
         self.enumerateChildNodes(withName: "//obstacle*") { (node, stop) in
             node.run(SKAction.moveBy(x: 0, y: self.frame.size.height * 0.11, duration: 0.1))
@@ -86,10 +75,24 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             }
         }
     }
-
     
-    func randomPosX() -> Int {
-        let randomX = Int.random(in: -300...300)
+    
+    func randomPosX() -> [CGFloat] {
+        var randomX: [CGFloat] = []
+        var randomX1: CGFloat = 0
+        var randomX2: CGFloat = 0
+        var randomX3: CGFloat = 0
+        
+        repeat {
+            randomX1 = CGFloat.random(in: -frame.width/2 + frame.size.width * 0.2...frame.width/2 - frame.size.width * 0.2)
+            randomX2 = CGFloat.random(in: -frame.width/2 + frame.size.width * 0.2...frame.width/2 - frame.size.width * 0.2)
+            randomX3 = CGFloat.random(in: -frame.width/2 + frame.size.width * 0.2...frame.width/2 - frame.size.width * 0.2)
+        } while abs(randomX1 - randomX2) < frame.size.width * 0.1 || abs(randomX1 - randomX3) < frame.size.width * 0.1 || abs(randomX2 - randomX3) < frame.size.width * 0.1
+        
+        randomX.append(randomX1)
+        randomX.append(randomX2)
+        randomX.append(randomX3)
+        print("ddd")
         return randomX
     }
     
@@ -111,15 +114,14 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     // MARK: - 장애물생성
-    func makeObstacle() {
+    func makeObstacle(_ positionX: CGFloat) {
         //랜덤 모양, 위치 생성
-        let randomX = randomPosX()
         let randomShape = randomHuddle()
         let obstacle = SKSpriteNode(imageNamed: "huddle\(randomShape)")
-        obstacle.size = CGSize(width: frame.size.width * 0.15 , height: frame.size
+        obstacle.size = CGSize(width: frame.size.width * 0.15, height: frame.size
             .height * 0.08)
         
-        obstacle.position = CGPoint(x: randomX, y: -600)
+        obstacle.position = CGPoint(x: positionX, y: -600)
         obstacle.name = "obstacle\(obstacleNumber)"
         obstacleNumber += 1
         
@@ -142,12 +144,28 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         obstacle.run(SKAction.moveBy(x: 0, y: heightScale, duration: 0.1))
     }
     
+    func arrangeObstacle() {
+        let randomObsacleNumber = Int.random(in: 1...3)
+        let randomX = randomPosX()
+        let randomNumber = Int.random(in: 0...2)
+        if randomObsacleNumber == 1 {
+            makeObstacle(randomX[randomNumber])
+        } else if randomObsacleNumber == 2{
+            makeObstacle(randomX[0])
+            makeObstacle(randomX[1])
+        } else {
+            makeObstacle(randomX[0])
+            makeObstacle(randomX[1])
+            makeObstacle(randomX[2])
+        }
+    }
+    
     func addCount() -> SKLabelNode {
         let nodeCount: Int
         
         switch score {
         case 0...5:
-            nodeCount = Int.random(in: 1...2)
+            nodeCount = 1
         case 6...10:
             nodeCount = Int.random(in: 2...4)
         case 11...20:
@@ -155,7 +173,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         case 21...40:
             nodeCount = Int.random(in: 7...10)
         default:
-            nodeCount = Int.random(in: score/5 - 2 ... score/5 + 3)
+            nodeCount = Int.random(in: score/5 - 1 ... score/5 + 4)
         }
         let labelNode = SKLabelNode(text: "\(nodeCount)")
         labelNode.name = "countLabel"
@@ -167,5 +185,5 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         return labelNode
     }
-    
+
 }
