@@ -52,7 +52,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         self.enumerateChildNodes(withName: "//obstacle*") { (node, stop) in
             node.run(SKAction.moveBy(x: 0, y: self.frame.size.height * 0.11, duration: 0.1))
-            if node.position.y > -800 + self.frame.size.height * 0.11 * 8 {
+            if node.position.y > -700 + self.frame.size.height * 0.11 * 6 {
                 node.removeFromParent()
             }
             
@@ -121,7 +121,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         obstacle.size = CGSize(width: frame.size.width * 0.15, height: frame.size
             .height * 0.08)
         
-        obstacle.position = CGPoint(x: positionX, y: -600)
+        obstacle.position = CGPoint(x: positionX, y: -700)
         obstacle.name = "obstacle\(obstacleNumber)"
         obstacleNumber += 1
         
