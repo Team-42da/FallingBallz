@@ -18,6 +18,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             scoreLabel.text = "Score: \(score)"
         }
     }
+    var obstacleArr: [[Int]] = []
     
     override func didMove(to view: SKView) {
 //        let borderBody = SKPhysicsBody(edgeLoopFrom: CGRect(x: frame.minX, y: frame.minY - 100, width: frame.width, height: frame.height + 100))
@@ -76,7 +77,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
     }
     
-    
     func randomPosX() -> [CGFloat] {
         var randomX: [CGFloat] = []
         var randomX1: CGFloat = 0
@@ -92,7 +92,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         randomX.append(randomX1)
         randomX.append(randomX2)
         randomX.append(randomX3)
-        print("ddd")
         return randomX
     }
     
@@ -124,7 +123,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         obstacle.position = CGPoint(x: positionX, y: -700)
         obstacle.name = "obstacle\(obstacleNumber)"
         obstacleNumber += 1
-        
+
         //physics
         let obstaclePadding = SKPhysicsBody(rectangleOf: CGSize(width: obstacle.size.width + 50 , height: obstacle.size.height + 10 ))
         obstacle.physicsBody = obstaclePadding
@@ -179,11 +178,31 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         labelNode.name = "countLabel"
         labelNode.fontColor = UIColor.black
         labelNode.fontSize = 40
-        labelNode.fontName = "SFUI-Regular"
+//        labelNode.fontName = "SFUI-Regular"
         labelNode.position = CGPoint(x: -2, y: -18)
         labelNode.zPosition = 2
         
         return labelNode
+    }
+
+    struct Queue<T> {
+        private var queue: [T] = []
+        
+        public var count: Int {
+            return queue.count
+        }
+        
+        public var isEmpty: Bool {
+            return queue.isEmpty
+        }
+        
+        public mutating func enqueue(_ element: T) {
+            queue.append(element)
+        }
+        
+        public mutating func dequeue() -> T? {
+            return isEmpty ? nil : queue.removeFirst()
+        }
     }
 
 }
