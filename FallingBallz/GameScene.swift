@@ -18,7 +18,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             scoreLabel.text = "Score: \(score)"
         }
     }
-    var obstacleArr: [[Int]] = []
+    var obstacleArr: [[Int]] = [[0,0,0],
+                                [0,0,0],
+                                [0,0,0],
+                                [0,0,0],
+                                [0,0,0],
+                                [0,0,0],
+                                [0,0,0]]
     
     override func didMove(to view: SKView) {
 //        let borderBody = SKPhysicsBody(edgeLoopFrom: CGRect(x: frame.minX, y: frame.minY - 100, width: frame.width, height: frame.height + 100))
@@ -96,15 +102,15 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     func randomHuddle() -> String {
-        let randomShape = Int.random(in: 0...2)
+        let randomShape = Int.random(in: 0...9)
         let shapeName: String
         
         switch randomShape {
-        case 0:
-            shapeName = "Triangle"
-        case 1:
+        case 0...5:
             shapeName = "Circle"
-        case 2:
+        case 6...7:
+            shapeName = "Triangle"
+        case 8...9:
             shapeName = "Rectangle"
         default:
             shapeName = "Circle"
@@ -113,7 +119,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     // MARK: - 장애물생성
-    func makeObstacle(_ positionX: CGFloat) {
+    // return을 count값으로 String으로 해서 이를 arrange에서 받아서 거기서 queue에 추가
+    func makeObstacle(_ positionX: CGFloat) -> String {
         //랜덤 모양, 위치 생성
         let randomShape = randomHuddle()
         let obstacle = SKSpriteNode(imageNamed: "huddle\(randomShape)")
@@ -141,22 +148,39 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         let heightScale = frame.size.height * 0.11
         
         obstacle.run(SKAction.moveBy(x: 0, y: heightScale, duration: 0.1))
+        
+        return labelNode.text!
     }
     
     func arrangeObstacle() {
         let randomObsacleNumber = Int.random(in: 1...3)
         let randomX = randomPosX()
         let randomNumber = Int.random(in: 0...2)
+        var tempArr: [Int] = []
+        
         if randomObsacleNumber == 1 {
-            makeObstacle(randomX[randomNumber])
+            let obstacle = makeObstacle(randomX[randomNumber])
+            tempArr.append(Int(obstacle)!)
+            print(tempArr)
         } else if randomObsacleNumber == 2{
-            makeObstacle(randomX[0])
-            makeObstacle(randomX[1])
+            let obstacle = makeObstacle(randomX[0])
+            let obstacle2 = makeObstacle(randomX[1])
+            tempArr.append(Int(obstacle)!)
+            tempArr.append(Int(obstacle2)!)
+            print(tempArr)
         } else {
-            makeObstacle(randomX[0])
-            makeObstacle(randomX[1])
-            makeObstacle(randomX[2])
+            let obstacle = makeObstacle(randomX[0])
+            let obstacle2 = makeObstacle(randomX[1])
+            let obstacle3 = makeObstacle(randomX[2])
+            tempArr.append(Int(obstacle)!)
+            tempArr.append(Int(obstacle2)!)
+            tempArr.append(Int(obstacle3)!)
+            print(tempArr)
         }
+        
+        var myQueue = Queue<[Int]>()
+        myQueue.enqueue(tempArr)
+        myQueue.dequeue()
     }
     
     func addCount() -> SKLabelNode {
