@@ -13,23 +13,29 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var obstacleNumber : Int = 0
     var scoreLabel: SKLabelNode!
     
+    let ballCategory: UInt32 = 0x1 // 볼의 카테고리 비트마스크
+    let ballRadius: CGFloat = 20.0 // 볼의 반지름 값
+
+    
     var score = 0 {
         didSet {
             scoreLabel.text = "Score: \(score)"
         }
     }
-    var obstacleArr: [[Int]] = [[0,0,0],
-                                [0,0,0],
-                                [0,0,0],
-                                [0,0,0],
-                                [0,0,0],
-                                [0,0,0],
-                                [0,0,0]]
+    var myQueue = Queue<[Int]>()
     
     override func didMove(to view: SKView) {
-//        let borderBody = SKPhysicsBody(edgeLoopFrom: CGRect(x: frame.minX, y: frame.minY - 100, width: frame.width, height: frame.height + 100))
-//        borderBody.friction = 0
-//        self.physicsBody = borderBody
+        
+        // 1
+        let borderBody = SKPhysicsBody(edgeLoopFrom: self.frame)
+        // 2
+        borderBody.friction = 0
+      
+        // 3
+        self.physicsBody = borderBody
+
+        self.physicsWorld.contactDelegate = self
+      
         
         scoreLabel = SKLabelNode(fontNamed: "Chalkduster")
         scoreLabel.text = "Score: 0"
@@ -38,8 +44,18 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         addChild(scoreLabel)
     }
     
+    func didBegin(_ contact: SKPhysicsContact) {
+            let collision = contact.bodyA.categoryBitMask | contact.bodyB.categoryBitMask
+            if collision == ballCategory { // 볼끼리 충돌이 일어남
+                // 충돌 시 원하는 동작 수행
+                // 예: 볼들에 힘을 가해서 튕기게 하거나, 효과음 재생 등
+            }
+        }
+    
     // 누르면 볼이 향할 방향 나타내기 해야함
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        makeBall()
+        
         //클릭하면 노드카운트 줄이기
         guard let touch = touches.first else { return }
         let touchLocation = touch.location(in: self)
@@ -83,6 +99,29 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
     }
     
+    // MARK: - ball영역
+    func makeBall() {
+        let ball = SKSpriteNode(imageNamed: "ball")
+//        ball!.size = CGSize(width: frame.size.width * 0.15, height: frame.size
+//            .height * 0.08)
+        
+        ball.position = CGPoint(x: 0, y: frame.size.height * 0.4)
+        
+        ball.physicsBody = SKPhysicsBody(circleOfRadius: ballRadius)
+        ball.physicsBody!.friction = 0
+        ball.physicsBody!.isDynamic = true
+        ball.physicsBody!.allowsRotation = true
+        ball.physicsBody?.affectedByGravity = true
+        ball.physicsBody?.restitution = 0.8
+        ball.physicsBody?.linearDamping = 0.01 // 예시로 값을 조정
+        
+        ball.physicsBody?.categoryBitMask = ballCategory
+        ball.physicsBody?.collisionBitMask = ballCategory
+
+        
+        self.addChild(ball)
+    }
+    
     func randomPosX() -> [CGFloat] {
         var randomX: [CGFloat] = []
         var randomX1: CGFloat = 0
@@ -93,7 +132,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             randomX1 = CGFloat.random(in: -frame.width/2 + frame.size.width * 0.2...frame.width/2 - frame.size.width * 0.2)
             randomX2 = CGFloat.random(in: -frame.width/2 + frame.size.width * 0.2...frame.width/2 - frame.size.width * 0.2)
             randomX3 = CGFloat.random(in: -frame.width/2 + frame.size.width * 0.2...frame.width/2 - frame.size.width * 0.2)
-        } while abs(randomX1 - randomX2) < frame.size.width * 0.1 || abs(randomX1 - randomX3) < frame.size.width * 0.1 || abs(randomX2 - randomX3) < frame.size.width * 0.1
+        } while abs(randomX1 - randomX2) < frame.size.width * 0.2 || abs(randomX1 - randomX3) < frame.size.width * 0.2 || abs(randomX2 - randomX3) < frame.size.width * 0.2
         
         randomX.append(randomX1)
         randomX.append(randomX2)
@@ -123,7 +162,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     func makeObstacle(_ positionX: CGFloat) -> String {
         //랜덤 모양, 위치 생성
         let randomShape = randomHuddle()
-        let obstacle = SKSpriteNode(imageNamed: "huddle\(randomShape)")
+        let obstacle = SKSpriteNode(imageNamed: "obstacle\(randomShape)")
         obstacle.size = CGSize(width: frame.size.width * 0.15, height: frame.size
             .height * 0.08)
         
@@ -135,9 +174,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         let obstaclePadding = SKPhysicsBody(rectangleOf: CGSize(width: obstacle.size.width + 50 , height: obstacle.size.height + 10 ))
         obstacle.physicsBody = obstaclePadding
         obstacle.physicsBody!.friction = 0.0
-        obstacle.physicsBody!.isDynamic = true
+        obstacle.physicsBody!.isDynamic = false
         obstacle.physicsBody!.allowsRotation = false
         obstacle.physicsBody?.affectedByGravity = false
+        obstacle.physicsBody?.collisionBitMask = 0b0001
+        obstacle.physicsBody?.categoryBitMask = 0b0001
         obstacle.zPosition = 1
         
         //count 추가
@@ -161,13 +202,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         if randomObsacleNumber == 1 {
             let obstacle = makeObstacle(randomX[randomNumber])
             tempArr.append(Int(obstacle)!)
-            print(tempArr)
         } else if randomObsacleNumber == 2{
             let obstacle = makeObstacle(randomX[0])
             let obstacle2 = makeObstacle(randomX[1])
             tempArr.append(Int(obstacle)!)
             tempArr.append(Int(obstacle2)!)
-            print(tempArr)
         } else {
             let obstacle = makeObstacle(randomX[0])
             let obstacle2 = makeObstacle(randomX[1])
@@ -175,12 +214,10 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             tempArr.append(Int(obstacle)!)
             tempArr.append(Int(obstacle2)!)
             tempArr.append(Int(obstacle3)!)
-            print(tempArr)
         }
         
-        var myQueue = Queue<[Int]>()
-        myQueue.enqueue(tempArr)
-        myQueue.dequeue()
+//        myQueue.enqueue(tempArr)
+//        print("myQueue : \(myQueue)")
     }
     
     func addCount() -> SKLabelNode {
