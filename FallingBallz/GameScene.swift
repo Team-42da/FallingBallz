@@ -162,6 +162,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     func makeObstacle(_ positionX: CGFloat) -> String {
         //랜덤 모양, 위치 생성
         let randomShape = randomHuddle()
+        let texture = SKTexture(imageNamed: "obstacle\(randomShape)")
         let obstacle = SKSpriteNode(imageNamed: "obstacle\(randomShape)")
         obstacle.size = CGSize(width: frame.size.width * 0.15, height: frame.size
             .height * 0.08)
@@ -171,7 +172,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         obstacleNumber += 1
 
         //physics
-        let obstaclePadding = SKPhysicsBody(rectangleOf: CGSize(width: obstacle.size.width + 50 , height: obstacle.size.height + 10 ))
+        let obstaclePadding = SKPhysicsBody(texture: texture, size: texture.size())
         obstacle.physicsBody = obstaclePadding
         obstacle.physicsBody!.friction = 0.0
         obstacle.physicsBody!.isDynamic = false
