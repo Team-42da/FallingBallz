@@ -7,7 +7,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var scoreLabel: SKLabelNode!
     let categoryA: UInt32 = 0x1 << 0 // 카테고리 A
     let categoryB: UInt32 = 0x1 << 1 // 카테고리 B
-    
+    var ball = SKSpriteNode()
+    var touchStartPosition: CGPoint = .zero
+    var gravityDirection: CGVector = CGVector(dx: 0, dy: -9.8)
     
     var score = 0 {
         didSet {
@@ -16,12 +18,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     override func didMove(to view: SKView) {
+        physicsWorld.gravity = gravityDirection
         physicsWorld.contactDelegate = self
-
+        
         let borderBody = SKPhysicsBody(edgeLoopFrom: self.frame)
         borderBody.friction = 0.5
         self.physicsBody = borderBody
-
+        
         scoreLabel = SKLabelNode(fontNamed: "Chalkduster")
         scoreLabel.text = "Score: 0"
         scoreLabel.horizontalAlignmentMode = .right
@@ -33,36 +36,48 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     // 누르면 볼이 향할 방향 나타내기 해야함
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         //클릭하면 노드카운트 줄이기
+        
         guard let touch = touches.first else { return }
         let touchLocation = touch.location(in: self)
         
         // 터치된 노드를 찾습니다.
         let touchedNode = self.atPoint(touchLocation)
         
-        
+        if touchLocation == touch.location(in: self) {
+            let destX: CGFloat = touchLocation.x
+            let destY: CGFloat = 0.0
+            let moveAction = SKAction.move(to: CGPoint(x: destX, y: destY), duration: 5)
+                childNode(withName: "ball")?.run(moveAction)
+            }
+     
+
         // 터치된 노드가 `obstacle`인지 확인하고, nodeCount를 줄입니다.
         if let obstacleNode = touchedNode as? SKSpriteNode, obstacleNode.name?.hasPrefix("obstacle") == true {
             decreaseNodeCount(obstacleNode)
         }
     }
     
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+//        guard let touch = touches.first else { return }
+//        let touchLocation = touch.location(in: self)
+
+    }
+    
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         
         let randomObsacleNumber = Int.random(in: 1...2)
         let positions = checkInterNode(numOfNodes: randomObsacleNumber)
-//        var tmpArr: [Int] = [0,0,0]
-//        var cnt = 0
-//
-        
-        makeBall()
 
+        guard let touch = touches.first else { return }
+        let touchLocation = touch.location(in: self)
+        
+        //setupGravity(destPosition: touchLocation)
+        let ball = makeBall(destPosition: touchLocation)
+        
         for xPos in positions {
             makeObstacle(xPos: xPos)
-
+            
         }
-        
-                
-      //  print(tmpArr)
         
         self.enumerateChildNodes(withName: "//obstacle*") { (node, stop) in
             node.run(SKAction.moveBy(x: 0, y: self.frame.size.height * 0.11, duration: 0.1))
@@ -134,11 +149,17 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         return shapeName
     }
     
+    
+    
     // MARK: - 장애물생성
     func makeObstacle(xPos: CGFloat) -> Int {
-      
+        
         let randomShape = randomHuddle()
+        let texture = SKTexture(imageNamed: "\(randomShape)")
         let obstacle = SKSpriteNode(imageNamed: "\(randomShape)")
+        let padding: CGFloat = 50.0
+        let paddedSize = CGSize(width: texture.size().width + padding, height: texture.size().height + padding)
+        
         obstacle.size = CGSize(width: frame.size.width * 0.15 , height: frame.size
             .height * 0.08)
         
@@ -146,16 +167,14 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         obstacle.name = "obstacle\(obstacleNumber)"
         obstacleNumber += 1
         
-        //physics
-        let obstaclePadding = SKPhysicsBody(rectangleOf: CGSize(width: obstacle.size.width + 50 , height: obstacle.size.height + 10 ))
-        obstacle.physicsBody = obstaclePadding
+        obstacle.physicsBody = SKPhysicsBody(texture: texture, size: paddedSize)
         obstacle.physicsBody!.friction = 0.0
         obstacle.physicsBody!.isDynamic = false
         obstacle.physicsBody!.allowsRotation = false
         obstacle.physicsBody?.affectedByGravity = false
         obstacle.zPosition = 1
         obstacle.physicsBody?.categoryBitMask = categoryA
-        obstacle.physicsBody?.collisionBitMask = categoryB
+        obstacle.physicsBody?.collisionBitMask = categoryA
         
         //count 추가
         let labelNode = addCount()
@@ -171,26 +190,68 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         return nodeCnt
     }
     
-    func makeBall() {
-        //원모양의 노드를 만들려면 shape노드를 써야함
+    
+    func setupGravity(destPosition: CGPoint) {
+        gravityDirection = CGVector(dx: 0, dy: -9.8)
+
+        let gravityMagnitude: CGFloat = 9.8  // 중력의 크기
+        
+        let center = CGPoint(x: 0, y: 600)  // 중심 좌표
+        let point = destPosition // 주어진 점
+
+        let dx = point.x - center.x
+        let dy = point.y - center.y
+
+        //let distance = hypot(dx, dy)
+        let angle = atan2(dy, dx)
+
+        let degrees = angle * 180 / .pi
+        
+        //let gravityDirection = CGVector(dx: cos(dx) * gravityMagnitude, dy: -gravityMagnitude)
+        gravityDirection = CGVector(dx: cos(degrees) * gravityMagnitude, dy: -gravityMagnitude)
+        physicsWorld.gravity = gravityDirection
+        
+    }
+
+    
+    func makeBall(destPosition: CGPoint) -> SKSpriteNode {
         let ball = SKSpriteNode(color: SKColor.white, size: CGSize(width: 20, height:20))
         ball.position = CGPoint(x:0, y: 600)
         
         let ballPhysics = SKPhysicsBody(circleOfRadius: 10)
+        
+        let x = destPosition.x - 0
+        let y = destPosition.y - 600
+        let magnitude = sqrt(x * x + y * y)
+        let dx = x / magnitude
+        let dy = y / magnitude
+        
+        let forceMagnitude: CGFloat = 150.0  // 공이 나가는 힘
+        let force = CGVector(dx: dx * forceMagnitude, dy: dy * forceMagnitude)
+        
+        
         ball.physicsBody = ballPhysics
-
         ballPhysics.friction = 0.0
         ballPhysics.isDynamic = true
         ballPhysics.affectedByGravity = true
-        ballPhysics.categoryBitMask = categoryB
+        ballPhysics.categoryBitMask = categoryA
         ballPhysics.collisionBitMask = categoryA
         ballPhysics.isDynamic = true // 물리적 시뮬레이션에 응답
-        ballPhysics.restitution = 1 // 튕겨나가는 정도 설정
+        ballPhysics.restitution = 0.8 // 튕겨나가는 정도 설정
+    
         self.addChild(ball)
+        
+        ballPhysics.applyForce(force)
+
+        return ball
         
     }
     
-    
+//    func normalizeVector(_ vector: CGVector) -> CGVector {
+//            let length = hypot(vector.dx, vector.dy)
+//            guard length != 0 else { return vector }
+//            return CGVector(dx: vector.dx / length, dy: vector.dy / length)
+//        }
     func addCount() -> SKLabelNode {
         let nodeCount: Int
         
