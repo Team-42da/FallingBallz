@@ -2,12 +2,13 @@ import SpriteKit
 import GameplayKit
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
-    
     var obstacleNumber : Int = 0
     var scoreLabel: SKLabelNode!
-    let categoryA: UInt32 = 0x1 << 0 // 카테고리 A
-    let categoryB: UInt32 = 0x1 << 1 // 카테고리 B
-    var ball = SKSpriteNode()
+    let ballCategory: UInt32 = 0x1 << 0
+    let obstacleCategory: UInt32 = 0x1 << 1
+    var ball: SKSpriteNode!
+    var obstacle: SKSpriteNode!
+
     var touchStartPosition: CGPoint = .zero
     var gravityDirection: CGVector = CGVector(dx: 0, dy: -9.8)
     
@@ -33,9 +34,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         addChild(scoreLabel)
     }
     
-    // 누르면 볼이 향할 방향 나타내기 해야함
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        //클릭하면 노드카운트 줄이기
         
         guard let touch = touches.first else { return }
         let touchLocation = touch.location(in: self)
@@ -43,24 +42,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         // 터치된 노드를 찾습니다.
         let touchedNode = self.atPoint(touchLocation)
         
-        if touchLocation == touch.location(in: self) {
-            let destX: CGFloat = touchLocation.x
-            let destY: CGFloat = 0.0
-            let moveAction = SKAction.move(to: CGPoint(x: destX, y: destY), duration: 5)
-                childNode(withName: "ball")?.run(moveAction)
-            }
-     
-
-        // 터치된 노드가 `obstacle`인지 확인하고, nodeCount를 줄입니다.
-        if let obstacleNode = touchedNode as? SKSpriteNode, obstacleNode.name?.hasPrefix("obstacle") == true {
-            decreaseNodeCount(obstacleNode)
-        }
-    }
-    
-    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-//        guard let touch = touches.first else { return }
-//        let touchLocation = touch.location(in: self)
-
+//        MARK:: didBegin에 공과 닿으면 사라지게 만들어서 일단 주석처리해둘게여
+//        터치된 노드가 `obstacle`인지 확인하고, nodeCount를 줄입니다.
+//        if let obstacleNode = touchedNode as? SKSpriteNode, obstacleNode.name?.hasPrefix("obstacle") == true {
+//            decreaseNodeCount(obstacleNode)
+//        }
     }
     
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -71,8 +57,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         guard let touch = touches.first else { return }
         let touchLocation = touch.location(in: self)
         
-        //setupGravity(destPosition: touchLocation)
-        let ball = makeBall(destPosition: touchLocation)
+        makeBall(destPosition: touchLocation)
         
         for xPos in positions {
             makeObstacle(xPos: xPos)
@@ -87,19 +72,29 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
     }
     
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        //
+    }
+    
+    //공과 블록이 부딪히면 블록의 count값 감소하도록 완성
+    func didBegin(_ contact: SKPhysicsContact) {
+        if let obstacle = contact.bodyA.node as? SKSpriteNode, let ball = contact.bodyB.node as? SKSpriteNode {
+            decreaseNodeCount(obstacle)
+        }
+        
+    }
+    
     func checkInterNode(numOfNodes: Int) -> [CGFloat] {
         var positions: [CGFloat] = []
         let nodeInterSize = frame.size.width * 0.15
         
         for _ in 0..<numOfNodes {
-            print(numOfNodes)
             var isValid = false
             var randomX: CGFloat!
             
             // while !isValid
             repeat {
                 randomX = CGFloat.random(in: -280...280)
-                //print("\(String(describing: randomX))-----randommmm")
                 
                 isValid = positions.allSatisfy { xPos in
                     let leftside = xPos-nodeInterSize > randomX+nodeInterSize
@@ -108,7 +103,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
                 }
             } while !isValid
             positions.append(randomX)
-            print(positions)
+
         }
         return positions
     }
@@ -131,7 +126,6 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         }
     }
     
-    
     func randomHuddle() -> String {
         let randomShape = Int.random(in: 0...2)
         let shapeName: String
@@ -149,7 +143,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         return shapeName
     }
     
-    
+    func detectContact() {
+        
+        
+        
+    }
     
     // MARK: - 장애물생성
     func makeObstacle(xPos: CGFloat) -> Int {
@@ -173,8 +171,9 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         obstacle.physicsBody!.allowsRotation = false
         obstacle.physicsBody?.affectedByGravity = false
         obstacle.zPosition = 1
-        obstacle.physicsBody?.categoryBitMask = categoryA
-        obstacle.physicsBody?.collisionBitMask = categoryA
+        obstacle.physicsBody?.categoryBitMask = obstacleCategory
+        obstacle.physicsBody?.contactTestBitMask = ballCategory
+
         
         //count 추가
         let labelNode = addCount()
@@ -191,37 +190,42 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     
-    func setupGravity(destPosition: CGPoint) {
-        gravityDirection = CGVector(dx: 0, dy: -9.8)
-
-        let gravityMagnitude: CGFloat = 9.8  // 중력의 크기
-        
-        let center = CGPoint(x: 0, y: 600)  // 중심 좌표
-        let point = destPosition // 주어진 점
-
-        let dx = point.x - center.x
-        let dy = point.y - center.y
-
-        //let distance = hypot(dx, dy)
-        let angle = atan2(dy, dx)
-
-        let degrees = angle * 180 / .pi
-        
-        //let gravityDirection = CGVector(dx: cos(dx) * gravityMagnitude, dy: -gravityMagnitude)
-        gravityDirection = CGVector(dx: cos(degrees) * gravityMagnitude, dy: -gravityMagnitude)
-        physicsWorld.gravity = gravityDirection
-        
-    }
+//    func setupGravity(destPosition: CGPoint) {
+//        gravityDirection = CGVector(dx: 0, dy: -9.8)
+//
+//        let gravityMagnitude: CGFloat = 9.8  // 중력의 크기
+//
+//        let center = CGPoint(x: 0, y: 600)  // 중심 좌표
+//        let point = destPosition // 주어진 점
+//
+//        let dx = point.x - center.x
+//        let dy = point.y - center.y
+//
+//        //let distance = hypot(dx, dy)
+//        let angle = atan2(dy, dx)
+//
+//        let degrees = angle * 180 / .pi
+//
+//        //let gravityDirection = CGVector(dx: cos(dx) * gravityMagnitude, dy: -gravityMagnitude)
+//        gravityDirection = CGVector(dx: cos(degrees) * gravityMagnitude, dy: -gravityMagnitude)
+//        physicsWorld.gravity = gravityDirection
+//
+//    }
 
     
-    func makeBall(destPosition: CGPoint) -> SKSpriteNode {
-        let ball = SKSpriteNode(color: SKColor.white, size: CGSize(width: 20, height:20))
-        ball.position = CGPoint(x:0, y: 600)
+    func makeBall(destPosition: CGPoint) {
+        physicsWorld.contactDelegate = self
+
         
+        //let ball = SKSpriteNode(color: SKColor.white, size: CGSize(width: 20, height:20))
+        let ball = SKSpriteNode(imageNamed: "Circle")
+        ball.size = CGSize(width: 30, height: 30)
+        
+        ball.position = CGPoint(x:0, y: 600)
         let ballPhysics = SKPhysicsBody(circleOfRadius: 10)
         
-        let x = destPosition.x - 0
-        let y = destPosition.y - 600
+        let x = destPosition.x - 0 // 공의 시작위치의 x값
+        let y = destPosition.y - 600 // 공 시작위치의 y값
         let magnitude = sqrt(x * x + y * y)
         let dx = x / magnitude
         let dy = y / magnitude
@@ -229,29 +233,24 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         let forceMagnitude: CGFloat = 150.0  // 공이 나가는 힘
         let force = CGVector(dx: dx * forceMagnitude, dy: dy * forceMagnitude)
         
-        
         ball.physicsBody = ballPhysics
         ballPhysics.friction = 0.0
         ballPhysics.isDynamic = true
         ballPhysics.affectedByGravity = true
-        ballPhysics.categoryBitMask = categoryA
-        ballPhysics.collisionBitMask = categoryA
+        ballPhysics.categoryBitMask = ballCategory
+        ballPhysics.contactTestBitMask = obstacleCategory
         ballPhysics.isDynamic = true // 물리적 시뮬레이션에 응답
         ballPhysics.restitution = 0.8 // 튕겨나가는 정도 설정
-    
+
         self.addChild(ball)
         
+
         ballPhysics.applyForce(force)
 
-        return ball
         
     }
     
-//    func normalizeVector(_ vector: CGVector) -> CGVector {
-//            let length = hypot(vector.dx, vector.dy)
-//            guard length != 0 else { return vector }
-//            return CGVector(dx: vector.dx / length, dy: vector.dy / length)
-//        }
+
     func addCount() -> SKLabelNode {
         let nodeCount: Int
         
