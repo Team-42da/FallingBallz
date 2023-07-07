@@ -10,7 +10,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var obstacle: SKSpriteNode!
 
     var touchStartPosition: CGPoint = .zero
-    var gravityDirection: CGVector = CGVector(dx: 0, dy: -9.8)
+    var gravityDirection: CGVector = CGVector(dx: 0, dy: -7.8)
     
     var score = 0 {
         didSet {
@@ -22,9 +22,20 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         physicsWorld.gravity = gravityDirection
         physicsWorld.contactDelegate = self
         
-        let borderBody = SKPhysicsBody(edgeLoopFrom: self.frame)
-        borderBody.friction = 0.5
-        self.physicsBody = borderBody
+//        let borderBody = SKPhysicsBody(edgeLoopFrom: self.frame)
+//        borderBody.friction = 0.5
+//        self.physicsBody = borderBody
+        let leftWall = SKNode()
+        leftWall.physicsBody = SKPhysicsBody(edgeFrom: CGPoint(x: frame.minX + 80, y: frame.minY), to: CGPoint(x: frame.minX + 80, y: frame.maxY))
+        leftWall.physicsBody?.friction = 0.5
+        self.addChild(leftWall)
+
+        let rightWall = SKNode()
+        
+        rightWall.physicsBody = SKPhysicsBody(edgeFrom: CGPoint(x: frame.maxX - 80, y: frame.minY), to: CGPoint(x: frame.maxX - 80, y: frame.maxY))
+        rightWall.physicsBody?.friction = 0.5
+        self.addChild(rightWall)
+
         
         scoreLabel = SKLabelNode(fontNamed: "Chalkduster")
         scoreLabel.text = "Score: 0"
@@ -39,10 +50,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         guard let touch = touches.first else { return }
         let touchLocation = touch.location(in: self)
         
-        // 터치된 노드를 찾습니다.
-        let touchedNode = self.atPoint(touchLocation)
+       
         
-//        MARK:: didBegin에 공과 닿으면 사라지게 만들어서 일단 주석처리해둘게여
+//        MARK:: didBegin에 공과 닿으면 사라지게 만들어서 일단 주석처리 해둠
+//        터치된 노드를 찾습니다.
+//        let touchedNode = self.atPoint(touchLocation)
 //        터치된 노드가 `obstacle`인지 확인하고, nodeCount를 줄입니다.
 //        if let obstacleNode = touchedNode as? SKSpriteNode, obstacleNode.name?.hasPrefix("obstacle") == true {
 //            decreaseNodeCount(obstacleNode)
@@ -78,7 +90,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     //공과 블록이 부딪히면 블록의 count값 감소하도록 완성
     func didBegin(_ contact: SKPhysicsContact) {
-        if let obstacle = contact.bodyA.node as? SKSpriteNode, let ball = contact.bodyB.node as? SKSpriteNode {
+        if let obstacle = contact.bodyA.node as? SKSpriteNode, let _ = contact.bodyB.node as? SKSpriteNode {
             decreaseNodeCount(obstacle)
         }
         
@@ -143,12 +155,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         return shapeName
     }
     
-    func detectContact() {
-        
-        
-        
-    }
-    
+
     // MARK: - 장애물생성
     func makeObstacle(xPos: CGFloat) -> Int {
         
@@ -244,10 +251,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
 
         self.addChild(ball)
         
-
         ballPhysics.applyForce(force)
 
-        
     }
     
 
