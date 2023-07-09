@@ -10,9 +10,12 @@ import GameplayKit
 class GameScene: SKScene, SKPhysicsContactDelegate {
     let ball = SKSpriteNode(imageNamed: "ball")
     let square = SKSpriteNode(imageNamed: "square")
+    let circle = SKSpriteNode(imageNamed: "circle")
+    let aimLine = SKShapeNode()
+    var isAiming = false
     var isBallMoving = false
     var touchStartPoint: CGPoint = .zero
-    var levelValue: Int = 10
+    var levelValue: Int = 15
     var levelLabel: SKLabelNode!
     
     override func didMove(to view: SKView) {
@@ -41,6 +44,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         square.position = CGPoint(x: screenSize.width / 3, y: screenSize.height / 2)
         addChild(square)
+        circle.position = CGPoint(x: screenSize.width / 1.5, y: screenSize.height / 3)
+        addChild(circle)
         
         // ball과 square의 충돌을 감지하기 위해 물리 연산 대리자로 self를 설정
         physicsWorld.contactDelegate = self
@@ -55,11 +60,19 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         square.physicsBody?.collisionBitMask = 0 // 충돌하지 않음
         square.physicsBody?.affectedByGravity = false
         
+        circle.physicsBody = SKPhysicsBody(rectangleOf: circle.size)
+        circle.physicsBody?.collisionBitMask = 0 // 충돌하지 않음
+        circle.physicsBody?.affectedByGravity = false
+        
+        aimLine.strokeColor = .white
+        aimLine.position = ball.position
+        addChild(aimLine)
+        
         
     }
     
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        if !isBallMoving, let touch = touches.first {
+        if let touch = touches.first {
             touchStartPoint = touch.location(in: self)
         }
     }
@@ -70,23 +83,25 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             shootBall(from: touchStartPoint, to: touchEndPoint)
         }
     }
-    
+
     func shootBall(from startPoint: CGPoint, to endPoint: CGPoint) {
         let direction = endPoint - startPoint
-        let speed: CGFloat = 600.0
+        let speed: CGFloat = 700.0
         
         // ball에 물리적 특성 추가 (중력 적용)
         ball.physicsBody = SKPhysicsBody(circleOfRadius: ball.size.width / 2)
         ball.physicsBody?.affectedByGravity = true
-        ball.physicsBody?.restitution = 0.5 //튕김정도 조절
+        ball.physicsBody?.restitution = 0.6 //튕김정도 조절
 
         // 방향 벡터의 크기를 조절하여 속도 조절
         let magnitude = sqrt(direction.x * direction.x + direction.y * direction.y)
         let normalizedDirection = CGPoint(x: direction.x / magnitude, y: direction.y / magnitude)
         let velocity = CGVector(dx: normalizedDirection.x * speed, dy: normalizedDirection.y * speed)
-        
-        // ball에 초기 속도 설정하여 발사
-        ball.physicsBody?.velocity = velocity
+        if isBallMoving == false {
+            // ball에 초기 속도 설정하여 발사
+            ball.physicsBody?.velocity = velocity
+            isBallMoving = true
+        }
     }
     override func update(_ currentTime: TimeInterval) {
         guard let physicsBody = ball.physicsBody else {
