@@ -8,144 +8,155 @@ import SpriteKit
 import GameplayKit
 
 class GameScene: SKScene, SKPhysicsContactDelegate {
-    // 원이 떨어질 수 있는 세로 칸의 개수
-    let verticalCellCount: Int = 6
-    var valueCounter: Int = 0
-    // 현재 화면에 존재하는 원의 배열
-    var shapeNodes: [SKShapeNode] = []
-    enum ShapeType {
-        case circle
-        case square
-        case triangle
-    }
+    let ball = SKSpriteNode(imageNamed: "ball")
+    let square = SKSpriteNode(imageNamed: "square")
+    var isBallMoving = false
+    var touchStartPoint: CGPoint = .zero
+    var levelValue: Int = 10
+    var levelLabel: SKLabelNode!
+    
     override func didMove(to view: SKView) {
-//        self.isUserInteractionEnabled = true
+        let screenSize = self.size
+        ball.position = CGPoint(x: screenSize.width / 2, y: screenSize.height - 100)
+        addChild(ball)
+        
+        square.position = CGPoint(x: screenSize.width / 2, y: screenSize.height / 2)
+        addChild(square)
+        
+        // ball과 square의 충돌을 감지하기 위해 물리 연산 대리자로 self를 설정
+        physicsWorld.contactDelegate = self
+        levelLabel = SKLabelNode(text: "\(levelValue)")
+        levelLabel.fontSize = 30
+        levelLabel.fontColor = .red
+        square.addChild(levelLabel)
+        
+        square.physicsBody = SKPhysicsBody(rectangleOf: square.size)
+        square.physicsBody?.categoryBitMask = 1 // 충돌 카테고리 설정
+        square.physicsBody?.contactTestBitMask = 2 // 충돌 검사 카테고리 설정
+        square.physicsBody?.collisionBitMask = 0 // 충돌하지 않음
+        square.physicsBody?.affectedByGravity = false
+        
+        
     }
+    
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        // 아래에서 랜덤으로 원 생성
-        createRandomShape()
-        
-        // 기존에 존재하는 도형들을 한 칸씩 위로 이동
-        moveCirclesUp()
-        
-        //화면 터치할 때마다 값 증가
-        valueCounter += 1
+        if !isBallMoving, let touch = touches.first {
+            touchStartPoint = touch.location(in: self)
+        }
     }
-    func createRandomShape() {
-        let numberOfShapes = Int.random(in: 1...3) // 1개에서 3개의 원 생성
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        if !isBallMoving, let touch = touches.first {
+            let touchEndPoint = touch.location(in: self)
+            shootBall(from: touchStartPoint, to: touchEndPoint)
+        }
+    }
+    
+    func shootBall(from startPoint: CGPoint, to endPoint: CGPoint) {
+        let direction = endPoint - startPoint
+        let speed: CGFloat = 800.0
         
-        var usedXPositions: Set<CGFloat> = [] // 사용된 x 좌표 저장
-        var createdShapes: [SKShapeNode] = [] // 생성된 도형 저장
-        
-        for _ in 1...numberOfShapes {
-            var randomX = CGFloat.random(in: shapeRadius() ..< (size.width - shapeRadius()))
-            
-            // 이미 사용된 x 좌표일 경우 다른 좌표 선택
-//            while usedXPositions.contains(randomX) {
-//                randomX = CGFloat.random(in: shapeRadius() ..< (size.width - shapeRadius()))
-//            }
-            while usedXPositions.contains(where: { $0 >= (randomX - paddingValue()) && $0 <= (randomX + paddingValue()) }) {
-                randomX = CGFloat.random(in: shapeRadius() ..< (size.width - shapeRadius()))
-            }
+        // ball에 물리적 특성 추가 (중력 적용)
+        ball.physicsBody = SKPhysicsBody(circleOfRadius: ball.size.width / 2)
+        ball.physicsBody?.affectedByGravity = true
+        ball.physicsBody?.restitution = 0.6 //튕김정도 조절
 
-            
-            let startY = -shapeRadius() // 시작 위치는 화면 밖으로 설정
-            
-            let shapeType = randomShapeType()
-            let shapeNode: SKShapeNode
-            switch shapeType {
-            case .circle:
-                shapeNode = SKShapeNode(circleOfRadius: shapeRadius())
-            case .square:
-                shapeNode = SKShapeNode(rectOf: CGSize(width: shapeRadius() * 1.8, height: shapeRadius() * 1.8))
-            case .triangle:
-                let trianglePath = createTrianglePath(size: CGSize(width: shapeRadius() * 2, height: shapeRadius() * 2))
-                shapeNode = SKShapeNode(path: trianglePath)
-            }
-
-            shapeNode.fillColor = .red
-            shapeNode.strokeColor = .clear
-            shapeNode.position = CGPoint(x: randomX, y: startY)
-            addChild(shapeNode)
-            
-            let valueLabel = createValueLabel()
-            shapeNode.addChild(valueLabel)
-            //zposition 주기 (안정성문제)
-            
-            
-            shapeNode.physicsBody = SKPhysicsBody(polygonFrom: shapeNode.path!)
-            shapeNode.physicsBody?.isDynamic = false
-            shapeNode.physicsBody?.affectedByGravity = false
-            
-            
-            // 사용된 x 좌표와 생성된 원들에 추가
-//            usedXPositions.insert(randomX)
-            usedXPositions.insert(shapeNode.position.x)
-            createdShapes.append(shapeNode)
+        // 방향 벡터의 크기를 조절하여 속도 조절
+        let magnitude = sqrt(direction.x * direction.x + direction.y * direction.y)
+        let normalizedDirection = CGPoint(x: direction.x / magnitude, y: direction.y / magnitude)
+        let velocity = CGVector(dx: normalizedDirection.x * speed, dy: normalizedDirection.y * speed)
+        
+        // ball에 초기 속도 설정하여 발사
+        ball.physicsBody?.velocity = velocity
+    }
+    override func update(_ currentTime: TimeInterval) {
+        guard let physicsBody = ball.physicsBody else {
+            return
         }
-        // 생성된 원들을 배열에 추가
-        shapeNodes.append(contentsOf: createdShapes)
-    } //createRandomShape
-    
-    
-    func createTrianglePath(size: CGSize) -> CGPath {
-        let path = UIBezierPath()
-        path.move(to: CGPoint(x: -size.width / 2, y: -size.height / 2))
-        path.addLine(to: CGPoint(x: size.width / 2, y: -size.height / 2))
-        path.addLine(to: CGPoint(x: 0, y: size.height / 2))
-        path.close()
-        return path.cgPath
-    }
-    func createValueLabel() -> SKLabelNode {
-        let valueLabel = SKLabelNode(fontNamed: "Arial")
-        valueLabel.fontSize = 25
-        valueLabel.fontColor = .white
-        valueLabel.text = "\(valueCounter)"
-        valueLabel.position = CGPoint(x: 0, y: -10)
-//        valueLabel.position = CGPoint(x: 0, y: randomShapeType() == .circle ? -20 : 0)
-        return valueLabel
-    }
-    
-    func randomShapeType() -> ShapeType {
-        let randomValue = Int.random(in: 0...2)
-        switch randomValue {
-        case 0:
-            return .circle
-        case 1:
-            return .square
-        case 2:
-            return .triangle
-        default:
-            return .circle
+        
+        if ball.position.y < -100 {
+            // 화면 아래로 사라지면 ball을 리셋
+            physicsBody.velocity = .zero
+            ball.position = CGPoint(x: size.width / 2, y: size.height - 100)
+            isBallMoving = false
+            ball.physicsBody?.affectedByGravity = false
         }
     }
-    func moveCirclesUp() {
-        // 기존에 존재하는 도형들을 한 칸씩 위로 이동
-        for shapeNode in shapeNodes {
-            let newY = shapeNode.position.y + cellHeight()
-            let moveAction = SKAction.move(to: CGPoint(x: shapeNode.position.x, y: newY), duration: 0.3)
-            shapeNode.run(moveAction)
-            let removeAction = SKAction.removeFromParent()
-            let sequenceAction = SKAction.sequence([moveAction, removeAction])
+    func didBegin(_ contact: SKPhysicsContact) {
+        // ball과 square 충돌 시 호출되는 메서드
+        if contact.bodyA.node == ball || contact.bodyB.node == ball {
+            levelValue -= 1 // Label 값을 1 감소
+            levelLabel.text = "\(levelValue)"
             
-            if newY >= (size.height - size.height / 6) {
-                shapeNode.run(sequenceAction)
-                
-                if let index = shapeNodes.firstIndex(of: shapeNode) {
-                    shapeNodes.remove(at: index)
-                }
-            } else {
-                shapeNode.run(moveAction)
+            if levelValue == 0 {
+                square.removeFromParent() // square 스프라이트 제거
             }
         }
-    }
-    func shapeRadius() -> CGFloat {
-        return size.width / 10 // 반지름 크기 조정
-    }
-    func paddingValue() -> CGFloat {
-        return size.width / 5
-    }
-    func cellHeight() -> CGFloat {
-        return size.height / CGFloat(verticalCellCount)
     }
 }
+
+extension CGPoint {
+    static func - (left: CGPoint, right: CGPoint) -> CGPoint {
+        return CGPoint(x: left.x - right.x, y: left.y - right.y)
+    }
+}
+
+
+
+
+
+
+//class GameScene: SKScene, SKPhysicsContactDelegate {
+//
+//        let spriteTypes = ["circle", "square", "triangle"] // Sprite 종류들
+//
+//        override func didMove(to view: SKView) {
+//            // Sprite 생성 함수 호출
+//            createSprites()
+//        }
+//
+//        func createSprites() {
+//            let minX = size.width * 0.1 // 생성할 Sprite의 최소 x 좌표
+//            let maxX = size.width * 0.9 // 생성할 Sprite의 최대 x 좌표
+//
+//            let spriteCount = Int.random(in: 1...3) // 생성할 Sprite 개수
+//
+//            for _ in 1...spriteCount {
+//                let randomX = CGFloat.random(in: minX...maxX)
+//                let spriteType = spriteTypes.randomElement()!
+//
+//                let sprite = createSprite(type: spriteType)
+//                sprite.position = CGPoint(x: randomX, y: 0)
+//
+//                addChild(sprite)
+//            }
+//        }
+//
+//        func createSprite(type: String) -> SKSpriteNode {
+//            let sprite = SKSpriteNode(imageNamed: type)
+//
+//            return sprite
+//        }
+//
+//
+//    struct Queue<T> {
+//        private var queue: [T] = []
+//
+//        public var count: Int {
+//            return queue.count
+//        }
+//
+//        public var isEmpty: Bool {
+//            return queue.isEmpty
+//        }
+//
+//        public mutating func enqueue(_ element: T) {
+//            queue.append(element)
+//        }
+//
+//        public mutating func dequeue() -> T? {
+//            return isEmpty ? nil : queue.removeFirst()
+//        }
+//    }
+//
+//}
