@@ -17,10 +17,29 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     override func didMove(to view: SKView) {
         let screenSize = self.size
+        let leftWallNode = SKShapeNode(rectOf: CGSize(width: 3, height: self.size.height))
+        let rightWallNode = SKShapeNode(rectOf: CGSize(width: 3, height: self.size.height))
+        
+        leftWallNode.position = CGPoint(x: 0, y: size.height / 2)
+        leftWallNode.fillColor = .red
+        addChild(leftWallNode)
+        leftWallNode.physicsBody = SKPhysicsBody(rectangleOf: leftWallNode.frame.size)
+        leftWallNode.physicsBody?.affectedByGravity = false
+        leftWallNode.physicsBody?.collisionBitMask = 0 // 이거 쓰면 충돌해도 사라지지 않음.
+        
+        rightWallNode.position = CGPoint(x: size.width, y: size.height / 2)
+        rightWallNode.fillColor = .red
+        addChild(rightWallNode)
+        rightWallNode.physicsBody = SKPhysicsBody(rectangleOf: rightWallNode.frame.size)
+        rightWallNode.physicsBody?.affectedByGravity = false
+        rightWallNode.physicsBody?.collisionBitMask = 0 // 이거 쓰면 충돌해도 사라지지 않음.
+        
+
+        
         ball.position = CGPoint(x: screenSize.width / 2, y: screenSize.height - 100)
         addChild(ball)
         
-        square.position = CGPoint(x: screenSize.width / 2, y: screenSize.height / 2)
+        square.position = CGPoint(x: screenSize.width / 3, y: screenSize.height / 2)
         addChild(square)
         
         // ball과 square의 충돌을 감지하기 위해 물리 연산 대리자로 self를 설정
@@ -54,12 +73,12 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     func shootBall(from startPoint: CGPoint, to endPoint: CGPoint) {
         let direction = endPoint - startPoint
-        let speed: CGFloat = 800.0
+        let speed: CGFloat = 600.0
         
         // ball에 물리적 특성 추가 (중력 적용)
         ball.physicsBody = SKPhysicsBody(circleOfRadius: ball.size.width / 2)
         ball.physicsBody?.affectedByGravity = true
-        ball.physicsBody?.restitution = 0.6 //튕김정도 조절
+        ball.physicsBody?.restitution = 0.5 //튕김정도 조절
 
         // 방향 벡터의 크기를 조절하여 속도 조절
         let magnitude = sqrt(direction.x * direction.x + direction.y * direction.y)
