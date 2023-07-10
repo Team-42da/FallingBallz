@@ -112,7 +112,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     func makeBall(_ destPosition: CGPoint) {
         physicsWorld.contactDelegate = self
         
-        let texture = SKTexture(imageNamed: "ball")
+//        let texture = SKTexture(imageNamed: "ball")
         let ball = SKSpriteNode(imageNamed: "ball")
         
         ball.position = CGPoint(x: 0, y: frame.size.height * 0.4)
@@ -126,7 +126,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         let forceMagnitude: CGFloat = 500.0  // 공이 나가는 힘
         let force = CGVector(dx: dx * forceMagnitude, dy: dy * forceMagnitude)
         
-        let ballPhysics = SKPhysicsBody(texture: texture, size: texture.size())
+        let ballPhysics = SKPhysicsBody(circleOfRadius: ballRadius)
         ball.physicsBody = ballPhysics
         ball.physicsBody!.friction = 0
         ball.physicsBody!.isDynamic = true
@@ -201,8 +201,8 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         obstacle.physicsBody?.isDynamic = false
         obstacle.physicsBody?.allowsRotation = false
         obstacle.physicsBody?.affectedByGravity = false
-        obstacle.physicsBody?.contactTestBitMask = obstacleCategory
-        obstacle.physicsBody?.categoryBitMask = ballCategory
+        obstacle.physicsBody?.contactTestBitMask = ballCategory
+        obstacle.physicsBody?.categoryBitMask = obstacleCategory
         obstacle.zPosition = 1
         
         //count 추가
