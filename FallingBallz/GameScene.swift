@@ -13,9 +13,11 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var obstacleNumber : Int = 0
     var scoreLabel: SKLabelNode!
     
-    let ballCategory: UInt32 = 0x1 // 볼의 카테고리 비트마스크
+    let ballCategory: UInt32 = 0x1 << 0 // 볼의 카테고리 비트마스크
+    let obstacleCategory: UInt32 = 0x1 << 1
     let ballRadius: CGFloat = 20.0 // 볼의 반지름 값
-
+    
+    var touchStartPosition: CGPoint = .zero
     
     var score = 0 {
         didSet {
@@ -25,17 +27,20 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     var myQueue = Queue<[Int]>()
     
     override func didMove(to view: SKView) {
+        physicsWorld.contactDelegate = self
         
-        // 1
-        let borderBody = SKPhysicsBody(edgeLoopFrom: self.frame)
-        // 2
-        borderBody.friction = 0
-      
-        // 3
-        self.physicsBody = borderBody
-
-        self.physicsWorld.contactDelegate = self
-      
+        // 왼벽 오른벽 생성
+        let leftWall = SKNode()
+        leftWall.physicsBody = SKPhysicsBody(edgeFrom: CGPoint(x: frame.minX + 80, y: frame.minY), to: CGPoint(x: frame.minX + 80, y: frame.maxY))
+        leftWall.physicsBody?.friction = 0
+        self.addChild(leftWall)
+        
+        let rightWall = SKNode()
+        
+        rightWall.physicsBody = SKPhysicsBody(edgeFrom: CGPoint(x: frame.maxX - 80, y: frame.minY), to: CGPoint(x: frame.maxX - 80, y: frame.maxY))
+        rightWall.physicsBody?.friction = 0
+        self.addChild(rightWall)
+        
         
         scoreLabel = SKLabelNode(fontNamed: "Chalkduster")
         scoreLabel.text = "Score: 0"
@@ -44,32 +49,36 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         addChild(scoreLabel)
     }
     
+    // 충돌을 처리
     func didBegin(_ contact: SKPhysicsContact) {
-            let collision = contact.bodyA.categoryBitMask | contact.bodyB.categoryBitMask
-            if collision == ballCategory { // 볼끼리 충돌이 일어남
-                // 충돌 시 원하는 동작 수행
-                // 예: 볼들에 힘을 가해서 튕기게 하거나, 효과음 재생 등
-            }
-        }
-    
-    // 누르면 볼이 향할 방향 나타내기 해야함
-    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        makeBall()
-        
-        //클릭하면 노드카운트 줄이기
-        guard let touch = touches.first else { return }
-        let touchLocation = touch.location(in: self)
-        
-        // 터치된 노드를 찾습니다.
-        let touchedNode = self.atPoint(touchLocation)
-        
-        // 터치된 노드가 `obstacle`인지 확인하고, nodeCount를 줄입니다.
-        if let obstacleNode = touchedNode as? SKSpriteNode, obstacleNode.name?.hasPrefix("obstacle") == true {
-            decreaseNodeCount(obstacleNode)
+        if let obstacle = contact.bodyA.node as? SKSpriteNode, let _ = contact.bodyB.node as? SKSpriteNode {
+            print("aaa")
+            decreaseNodeCount(obstacle)
         }
     }
     
+    // 누르면 볼이 향할 방향 나타내기 해야함
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        
+        //        //클릭하면 노드카운트 줄이기
+        //        guard let touch = touches.first else { return }
+        //        let touchLocation = touch.location(in: self)
+        //
+        //        // 터치된 노드를 찾습니다.
+        //        let touchedNode = self.atPoint(touchLocation)
+        //
+        //        // 터치된 노드가 `obstacle`인지 확인하고, nodeCount를 줄입니다.
+        //                if let obstacleNode = touchedNode as? SKSpriteNode, obstacleNode.name?.hasPrefix("obstacle") == true {
+        //                    decreaseNodeCount(obstacleNode)
+        //                }
+    }
+    
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        
+        guard let touch = touches.first else { return }
+        let touchLocation = touch.location(in: self)
+        
+        makeBall(touchLocation)
         
         arrangeObstacle()
         
@@ -100,26 +109,38 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     }
     
     // MARK: - ball영역
-    func makeBall() {
+    func makeBall(_ destPosition: CGPoint) {
+        physicsWorld.contactDelegate = self
+        
+        let texture = SKTexture(imageNamed: "ball")
         let ball = SKSpriteNode(imageNamed: "ball")
-//        ball!.size = CGSize(width: frame.size.width * 0.15, height: frame.size
-//            .height * 0.08)
         
         ball.position = CGPoint(x: 0, y: frame.size.height * 0.4)
         
-        ball.physicsBody = SKPhysicsBody(circleOfRadius: ballRadius)
+        let x = destPosition.x - 0 // 공의 시작위치의 x값
+        let y = destPosition.y - frame.size.height * 0.4 // 공 시작위치의 y값
+        let magnitude = sqrt(x * x + y * y)
+        let dx = x / magnitude
+        let dy = y / magnitude
+        
+        let forceMagnitude: CGFloat = 500.0  // 공이 나가는 힘
+        let force = CGVector(dx: dx * forceMagnitude, dy: dy * forceMagnitude)
+        
+        let ballPhysics = SKPhysicsBody(texture: texture, size: texture.size())
+        ball.physicsBody = ballPhysics
         ball.physicsBody!.friction = 0
         ball.physicsBody!.isDynamic = true
         ball.physicsBody!.allowsRotation = true
         ball.physicsBody?.affectedByGravity = true
         ball.physicsBody?.restitution = 0.8
-        ball.physicsBody?.linearDamping = 0.01 // 예시로 값을 조정
+//      ball.physicsBody?.linearDamping = 0.01 // 예시로 값을 조정
         
-        ball.physicsBody?.categoryBitMask = ballCategory
-        ball.physicsBody?.collisionBitMask = ballCategory
-
+        ballPhysics.categoryBitMask = ballCategory
+        ballPhysics.contactTestBitMask = obstacleCategory
         
         self.addChild(ball)
+        
+        ballPhysics.applyForce(force)
     }
     
     func randomPosX() -> [CGFloat] {
@@ -159,31 +180,35 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
     
     // MARK: - 장애물생성
     // return을 count값으로 String으로 해서 이를 arrange에서 받아서 거기서 queue에 추가
-    func makeObstacle(_ positionX: CGFloat) -> String {
+    func makeObstacle(_ positionX: CGFloat) -> Int {
+        physicsWorld.contactDelegate = self
         //랜덤 모양, 위치 생성
         let randomShape = randomHuddle()
         let texture = SKTexture(imageNamed: "obstacle\(randomShape)")
         let obstacle = SKSpriteNode(imageNamed: "obstacle\(randomShape)")
+        let padding: CGFloat = 35
+        let paddedSize = CGSize(width: texture.size().width + padding, height: texture.size().height + padding)
         obstacle.size = CGSize(width: frame.size.width * 0.15, height: frame.size
             .height * 0.08)
         
         obstacle.position = CGPoint(x: positionX, y: -700)
         obstacle.name = "obstacle\(obstacleNumber)"
         obstacleNumber += 1
-
+        
         //physics
-        let obstaclePadding = SKPhysicsBody(texture: texture, size: texture.size())
-        obstacle.physicsBody = obstaclePadding
-        obstacle.physicsBody!.friction = 0.0
-        obstacle.physicsBody!.isDynamic = false
-        obstacle.physicsBody!.allowsRotation = false
+        obstacle.physicsBody = SKPhysicsBody(texture: texture, size: paddedSize)
+        obstacle.physicsBody?.friction = 0.0
+        obstacle.physicsBody?.isDynamic = false
+        obstacle.physicsBody?.allowsRotation = false
         obstacle.physicsBody?.affectedByGravity = false
-        obstacle.physicsBody?.collisionBitMask = 0b0001
-        obstacle.physicsBody?.categoryBitMask = 0b0001
+        obstacle.physicsBody?.contactTestBitMask = obstacleCategory
+        obstacle.physicsBody?.categoryBitMask = ballCategory
         obstacle.zPosition = 1
         
         //count 추가
         let labelNode = addCount()
+        guard let nodeCnt = Int(labelNode.text!) else { return 0 }
+        
         obstacle.addChild(labelNode)
         self.addChild(obstacle)
         
@@ -191,7 +216,7 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         obstacle.run(SKAction.moveBy(x: 0, y: heightScale, duration: 0.1))
         
-        return labelNode.text!
+        return nodeCnt
     }
     
     func arrangeObstacle() {
@@ -202,23 +227,23 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         
         if randomObsacleNumber == 1 {
             let obstacle = makeObstacle(randomX[randomNumber])
-            tempArr.append(Int(obstacle)!)
+            //            tempArr.append(Int(obstacle)!)
         } else if randomObsacleNumber == 2{
             let obstacle = makeObstacle(randomX[0])
             let obstacle2 = makeObstacle(randomX[1])
-            tempArr.append(Int(obstacle)!)
-            tempArr.append(Int(obstacle2)!)
+            //            tempArr.append(Int(obstacle)!)
+            //            tempArr.append(Int(obstacle2)!)
         } else {
             let obstacle = makeObstacle(randomX[0])
             let obstacle2 = makeObstacle(randomX[1])
             let obstacle3 = makeObstacle(randomX[2])
-            tempArr.append(Int(obstacle)!)
-            tempArr.append(Int(obstacle2)!)
-            tempArr.append(Int(obstacle3)!)
+            //            tempArr.append(Int(obstacle)!)
+            //            tempArr.append(Int(obstacle2)!)
+            //            tempArr.append(Int(obstacle3)!)
         }
         
-//        myQueue.enqueue(tempArr)
-//        print("myQueue : \(myQueue)")
+        //        myQueue.enqueue(tempArr)
+        //        print("myQueue : \(myQueue)")
     }
     
     func addCount() -> SKLabelNode {
@@ -240,13 +265,13 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
         labelNode.name = "countLabel"
         labelNode.fontColor = UIColor.black
         labelNode.fontSize = 40
-//        labelNode.fontName = "SFUI-Regular"
+        //        labelNode.fontName = "SFUI-Regular"
         labelNode.position = CGPoint(x: -2, y: -18)
         labelNode.zPosition = 2
         
         return labelNode
     }
-
+    
     struct Queue<T> {
         private var queue: [T] = []
         
@@ -266,5 +291,5 @@ class GameScene: SKScene, SKPhysicsContactDelegate {
             return isEmpty ? nil : queue.removeFirst()
         }
     }
-
+    
 }
